@@ -1,7 +1,8 @@
 # Chessies
 
 A simple web-based chess game built entirely on the client side using React.
-The project is currently a small skeleton to get development started.
+The game supports all standard chess rules, drag and drop piece movement with
+highlighted legal moves and a restart button to reset the board.
 
 ## Development
 
