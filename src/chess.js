@@ -64,7 +64,7 @@ class Chess {
   }
 
   // Generate pseudo-legal moves for a piece
-  generateMovesForPiece(r, c) {
+  generateMovesForPiece(r, c, includeCastling = true) {
     const piece = this.getPiece(r, c);
     if (!piece) return [];
     const color = this.pieceColor(piece);
@@ -124,7 +124,7 @@ class Chess {
           }
         }
         // castling
-        if (!this.inCheck(color) && ((color === 'w' && r === 7) || (color === 'b' && r === 0))) {
+        if (includeCastling && !this.inCheck(color) && ((color === 'w' && r === 7) || (color === 'b' && r === 0))) {
           if (this.castling[color].k && this.isEmpty(r, 5) && this.isEmpty(r,6) &&
               !this.squareAttacked(r,5,color) && !this.squareAttacked(r,6,color)) {
             moves.push({ r, c: 6, special: 'castle-k' });
@@ -162,7 +162,7 @@ class Chess {
       for (let j = 0; j < 8; j++) {
         const p = this.getPiece(i, j);
         if (p && this.pieceColor(p) === opp) {
-          const moves = this.generateMovesForPiece(i, j);
+          const moves = this.generateMovesForPiece(i, j, false);
           if (moves.some(m => m.r === r && m.c === c)) return true;
         }
       }
