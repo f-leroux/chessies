@@ -1,0 +1,11 @@
+.App {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+#board {
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  height: 400px;
+  width: 400px;
+}
