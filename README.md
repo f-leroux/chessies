@@ -12,10 +12,8 @@ backend. Currently it's just a skeleton to get development started.
 
 ## Development
 
-### Frontend
 
 ```
-cd frontend
 npm install        # install dependencies
 npm start          # run webpack dev server
 ```
