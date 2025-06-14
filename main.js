@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let validMoves = [];
     let currentTurn = 'white';
     let moveCount = 0;
+    let pgnMoves = [];
 
     const board = document.getElementById('chessBoard');
     const gameLog = document.getElementById('gameLog');
@@ -27,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPiece = null;
         validMoves = [];
         setEnPassantInfo(null);
+
+        pgnMoves = [];
 
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
@@ -194,16 +197,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function logMove(piece, fromRow, fromCol, toRow, toCol, capturedPiece) {
         const pieceType = piece.dataset.type;
-        const pieceColor = piece.dataset.color;
         const fromSquare = String.fromCharCode(97 + fromCol) + (8 - fromRow);
         const toSquare = String.fromCharCode(97 + toCol) + (8 - toRow);
 
-        let moveText = `${pieceColor[0].toUpperCase() + pieceColor.slice(1)} ${pieceType} moved from ${fromSquare} to ${toSquare}`;
-        if (capturedPiece) {
-            moveText += ` capturing ${capturedPiece.dataset.color} ${capturedPiece.dataset.type}`;
+        const pieceNotation = {
+            pawn: '',
+            knight: 'N',
+            bishop: 'B',
+            rook: 'R',
+            queen: 'Q',
+            king: 'K'
+        }[pieceType] || '';
+
+        let notation = '';
+        if (pieceType === 'pawn') {
+            notation = capturedPiece ? `${fromSquare[0]}x${toSquare}` : toSquare;
+        } else {
+            notation = pieceNotation + (capturedPiece ? 'x' : '') + toSquare;
         }
 
-        gameLog.innerHTML = `<p>${moveText}</p>` + gameLog.innerHTML;
+        pgnMoves.push(notation);
+        updatePgnLog();
+    }
+
+    function updatePgnLog() {
+        let text = '';
+        for (let i = 0; i < pgnMoves.length; i += 2) {
+            const moveNumber = Math.floor(i / 2) + 1;
+            const whiteMove = pgnMoves[i];
+            const blackMove = pgnMoves[i + 1] || '';
+            text += `${moveNumber}. ${whiteMove}`;
+            if (blackMove) text += ` ${blackMove}`;
+            if (i + 2 < pgnMoves.length) text += ' ';
+        }
+        gameLog.innerHTML = `<p>${text}</p>`;
     }
 
     function updateTurnIndicator() {
@@ -216,10 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const blackKing = document.querySelector('.piece[data-type="king"][data-color="black"]');
 
         if (!whiteKing) {
-            gameLog.innerHTML = `<p>Game Over! Black wins by capturing the white king!</p>` + gameLog.innerHTML;
+            gameLog.innerHTML += `<p>Game Over! Black wins by capturing the white king!</p>`;
             endGame('black');
         } else if (!blackKing) {
-            gameLog.innerHTML = `<p>Game Over! White wins by capturing the black king!</p>` + gameLog.innerHTML;
+            gameLog.innerHTML += `<p>Game Over! White wins by capturing the black king!</p>`;
             endGame('white');
         }
     }
@@ -236,8 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
     newGameBtn.addEventListener('click', function() {
         initializeBoard();
         gameLog.innerHTML = '<p>Game started. White to move.</p>';
+        updatePgnLog();
     });
 
     initializeBoard();
+    updatePgnLog();
 });
 
