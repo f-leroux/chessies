@@ -1,3 +1,13 @@
+let enPassantInfo = null;
+
+export function setEnPassantInfo(info) {
+    enPassantInfo = info;
+}
+
+export function getEnPassantInfo() {
+    return enPassantInfo;
+}
+
 export function calculateValidMoves(piece, getCellAt) {
     const type = piece.dataset.type;
     const color = piece.dataset.color;
@@ -49,6 +59,19 @@ function calculatePawnMoves(row, col, color, getCellAt) {
             }
         }
     });
+
+    if (enPassantInfo && enPassantInfo.color !== color) {
+        if (enPassantInfo.row === row && Math.abs(enPassantInfo.col - col) === 1) {
+            const targetRow = enPassantInfo.captureRow;
+            const targetCol = enPassantInfo.col;
+            if (targetRow === row + direction) {
+                const targetCell = getCellAt(targetRow, targetCol);
+                if (targetCell && !targetCell.querySelector('.piece')) {
+                    moves.push({ row: targetRow, col: targetCol });
+                }
+            }
+        }
+    }
 
     return moves;
 }

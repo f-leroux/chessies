@@ -1,4 +1,4 @@
-import { calculateValidMoves } from './movement.js';
+import { calculateValidMoves, setEnPassantInfo, getEnPassantInfo } from './movement.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let selectedPiece = null;
@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTurn = 'white';
         selectedPiece = null;
         validMoves = [];
+        setEnPassantInfo(null);
 
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
@@ -140,13 +141,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetRow = parseInt(targetCell.dataset.row);
         const targetCol = parseInt(targetCell.dataset.col);
 
-        const capturedPiece = targetCell.querySelector('.piece');
-        if (capturedPiece) {
+        let capturedPiece = targetCell.querySelector('.piece');
+        const enPassant = getEnPassantInfo();
+        const isEnPassant =
+            piece.dataset.type === 'pawn' &&
+            enPassant &&
+            enPassant.color !== piece.dataset.color &&
+            sourceRow === enPassant.row &&
+            targetRow === enPassant.captureRow &&
+            targetCol === enPassant.col &&
+            Math.abs(sourceCol - enPassant.col) === 1;
+
+        if (isEnPassant) {
+            capturedPiece = enPassant.piece;
+            if (capturedPiece) {
+                handleCapture(piece, capturedPiece);
+            }
+        } else if (capturedPiece) {
             handleCapture(piece, capturedPiece);
         }
 
         targetCell.appendChild(piece);
         logMove(piece, sourceRow, sourceCol, targetRow, targetCol, capturedPiece);
+
+        setEnPassantInfo(null);
+        if (
+            piece.dataset.type === 'pawn' &&
+            Math.abs(targetRow - sourceRow) === 2
+        ) {
+            setEnPassantInfo({
+                row: targetRow,
+                col: targetCol,
+                captureRow:
+                    targetRow + (piece.dataset.color === 'white' ? 1 : -1),
+                color: piece.dataset.color,
+                piece: piece
+            });
+        }
 
         currentTurn = currentTurn === 'white' ? 'black' : 'white';
         moveCount++;
