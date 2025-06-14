@@ -11,6 +11,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameLog = document.getElementById('gameLog');
     const turnIndicator = document.getElementById('turnIndicator');
     const newGameBtn = document.getElementById('newGameBtn');
+    const promotionModal = document.getElementById('promotionModal');
+    const promotionButtons = promotionModal.querySelectorAll('button');
+    let promotionResolver = null;
+
+    promotionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (promotionResolver) {
+                promotionResolver(btn.dataset.piece);
+                promotionResolver = null;
+            }
+            promotionModal.style.display = 'none';
+        });
+    });
+
+    function choosePromotionPiece() {
+        return new Promise(resolve => {
+            promotionResolver = resolve;
+            promotionModal.style.display = 'flex';
+        });
+    }
 
     const pieceSymbols = {
         pawn: '♟',
@@ -81,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
     }
 
-    function handleCellClick(event) {
+    async function handleCellClick(event) {
         const cell = event.currentTarget;
 
         if (selectedPiece) {
@@ -92,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             if (isValidMove) {
-                movePiece(selectedPiece, cell);
+                await movePiece(selectedPiece, cell);
             } else {
                 const piece = cell.querySelector('.piece');
                 if (piece && piece.dataset.color === currentTurn) {
@@ -137,12 +157,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function movePiece(piece, targetCell) {
+    async function movePiece(piece, targetCell) {
         const sourceCell = piece.parentElement;
         const sourceRow = parseInt(sourceCell.dataset.row);
         const sourceCol = parseInt(sourceCell.dataset.col);
         const targetRow = parseInt(targetCell.dataset.row);
         const targetCol = parseInt(targetCell.dataset.col);
+
+        const originalType = piece.dataset.type;
+
 
         let capturedPiece = targetCell.querySelector('.piece');
         const enPassant = getEnPassantInfo();
@@ -165,7 +188,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         targetCell.appendChild(piece);
-        logMove(piece, sourceRow, sourceCol, targetRow, targetCol, capturedPiece);
+
+        let promotionPiece = null;
+        if (
+            originalType === 'pawn' &&
+            (targetRow === 0 || targetRow === 7)
+        ) {
+            promotionPiece = await choosePromotionPiece();
+            promotePawn(piece, promotionPiece);
+        }
+
+        logMove(
+            piece,
+            sourceRow,
+            sourceCol,
+            targetRow,
+            targetCol,
+            capturedPiece,
+            promotionPiece,
+            originalType
+        );
 
         setEnPassantInfo(null);
         if (
@@ -195,8 +237,26 @@ document.addEventListener('DOMContentLoaded', () => {
         capturedPiece.remove();
     }
 
-    function logMove(piece, fromRow, fromCol, toRow, toCol, capturedPiece) {
-        const pieceType = piece.dataset.type;
+    function promotePawn(piece, newType = 'queen') {
+        piece.dataset.type = newType;
+        const symbol = pieceSymbols[newType];
+        piece.textContent =
+            piece.dataset.color === 'white'
+                ? String.fromCharCode(symbol.charCodeAt(0) - 6)
+                : symbol;
+    }
+
+    function logMove(
+        piece,
+        fromRow,
+        fromCol,
+        toRow,
+        toCol,
+        capturedPiece,
+        promotionPiece,
+        originalType
+    ) {
+        const pieceType = originalType || piece.dataset.type;
         const fromSquare = String.fromCharCode(97 + fromCol) + (8 - fromRow);
         const toSquare = String.fromCharCode(97 + toCol) + (8 - toRow);
 
@@ -214,6 +274,15 @@ document.addEventListener('DOMContentLoaded', () => {
             notation = capturedPiece ? `${fromSquare[0]}x${toSquare}` : toSquare;
         } else {
             notation = pieceNotation + (capturedPiece ? 'x' : '') + toSquare;
+        }
+        if (promotionPiece) {
+            const promoNotation = {
+                queen: 'Q',
+                rook: 'R',
+                bishop: 'B',
+                knight: 'N'
+            }[promotionPiece] || 'Q';
+            notation += `=${promoNotation}`;
         }
 
         pgnMoves.push(notation);
