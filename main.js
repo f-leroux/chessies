@@ -101,6 +101,88 @@ document.addEventListener('DOMContentLoaded', () => {
         return document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
     }
 
+    function isKingInCheck(color) {
+        const king = document.querySelector(`.piece[data-type="king"][data-color="${color}"]`);
+        if (!king) return false;
+        const kingRow = parseInt(king.parentElement.dataset.row);
+        const kingCol = parseInt(king.parentElement.dataset.col);
+        const opponentColor = color === 'white' ? 'black' : 'white';
+        const opponentPieces = document.querySelectorAll(`.piece[data-color="${opponentColor}"]`);
+
+        for (const opPiece of opponentPieces) {
+            const moves = calculateValidMoves(opPiece, getCellAt);
+            if (moves.some(m => m.row === kingRow && m.col === kingCol)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function simulateMove(piece, targetCell) {
+        const sourceCell = piece.parentElement;
+        const capturedPiece = targetCell.querySelector('.piece');
+        const enPassant = getEnPassantInfo();
+
+        let enPassantCaptured = null;
+        if (
+            piece.dataset.type === 'pawn' &&
+            !capturedPiece &&
+            enPassant &&
+            enPassant.color !== piece.dataset.color
+        ) {
+            const sourceRow = parseInt(sourceCell.dataset.row);
+            const sourceCol = parseInt(sourceCell.dataset.col);
+            const targetRow = parseInt(targetCell.dataset.row);
+            const targetCol = parseInt(targetCell.dataset.col);
+            if (
+                sourceRow === enPassant.row &&
+                targetRow === enPassant.captureRow &&
+                targetCol === enPassant.col &&
+                Math.abs(sourceCol - enPassant.col) === 1
+            ) {
+                enPassantCaptured = enPassant.piece;
+                if (enPassantCaptured && enPassantCaptured.parentElement) {
+                    enPassantCaptured.parentElement.removeChild(enPassantCaptured);
+                }
+            }
+        }
+
+        if (capturedPiece) targetCell.removeChild(capturedPiece);
+        targetCell.appendChild(piece);
+
+        return () => {
+            sourceCell.appendChild(piece);
+            if (capturedPiece) targetCell.appendChild(capturedPiece);
+            if (enPassantCaptured) {
+                const captureCell = getCellAt(
+                    parseInt(enPassant.row),
+                    parseInt(enPassant.col)
+                );
+                if (captureCell) captureCell.appendChild(enPassantCaptured);
+            }
+        };
+    }
+
+    function filterMovesPreventCheck(piece, moves) {
+        return moves.filter(move => {
+            const targetCell = getCellAt(move.row, move.col);
+            const undo = simulateMove(piece, targetCell);
+            const inCheck = isKingInCheck(piece.dataset.color);
+            undo();
+            return !inCheck;
+        });
+    }
+
+    function hasAnyValidMoves(color) {
+        const pieces = document.querySelectorAll(`.piece[data-color="${color}"]`);
+        for (const piece of pieces) {
+            let moves = calculateValidMoves(piece, getCellAt);
+            moves = filterMovesPreventCheck(piece, moves);
+            if (moves.length > 0) return true;
+        }
+        return false;
+    }
+
     async function handleCellClick(event) {
         const cell = event.currentTarget;
 
@@ -135,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cell = piece.parentElement;
         cell.classList.add('selected');
         validMoves = calculateValidMoves(piece, getCellAt);
+        validMoves = filterMovesPreventCheck(piece, validMoves);
         validMoves.forEach(move => {
             const moveCell = getCellAt(move.row, move.col);
             if (moveCell) moveCell.classList.add('valid-move');
@@ -317,6 +400,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (!blackKing) {
             gameLog.innerHTML += `<p>Game Over! White wins by capturing the black king!</p>`;
             endGame('white');
+        } else {
+            const inCheck = isKingInCheck(currentTurn);
+            const hasMoves = hasAnyValidMoves(currentTurn);
+            if (inCheck && !hasMoves) {
+                const winner = currentTurn === 'white' ? 'black' : 'white';
+                gameLog.innerHTML += `<p>Checkmate! ${winner[0].toUpperCase() + winner.slice(1)} wins!</p>`;
+                endGame(winner);
+            }
         }
     }
 
