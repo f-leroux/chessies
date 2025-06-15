@@ -32,13 +32,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const pieceSymbols = {
-        pawn: '♟',
-        rook: '♜',
-        knight: '♞',
-        bishop: '♝',
-        queen: '♛',
-        king: '♚'
+    const pieceImages = {
+        white: {
+            pawn: 'sprites/w_pawn.svg',
+            rook: 'sprites/w_rook.svg',
+            knight: 'sprites/w_knight.svg',
+            bishop: 'sprites/w_bishop.svg',
+            queen: 'sprites/w_queen.svg',
+            king: 'sprites/w_king.svg'
+        },
+        black: {
+            pawn: 'sprites/b_pawn.svg',
+            rook: 'sprites/b_rook.svg',
+            knight: 'sprites/b_knight.svg',
+            bishop: 'sprites/b_bishop.svg',
+            queen: 'sprites/b_queen.svg',
+            king: 'sprites/b_king.svg'
+        }
     };
 
     function initializeBoard() {
@@ -84,15 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cell = getCellAt(row, col);
         if (!cell) return;
 
-        const piece = document.createElement('div');
+        const piece = document.createElement('img');
         piece.className = `piece ${color}`;
         piece.dataset.type = type;
         piece.dataset.color = color;
-
-        const symbol = pieceSymbols[type];
-        piece.textContent = color === 'white'
-            ? String.fromCharCode(symbol.charCodeAt(0) - 6)
-            : symbol;
+        piece.src = pieceImages[color][type];
+        piece.alt = `${color} ${type}`;
 
         cell.appendChild(piece);
     }
@@ -322,11 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function promotePawn(piece, newType = 'queen') {
         piece.dataset.type = newType;
-        const symbol = pieceSymbols[newType];
-        piece.textContent =
-            piece.dataset.color === 'white'
-                ? String.fromCharCode(symbol.charCodeAt(0) - 6)
-                : symbol;
+        piece.src = pieceImages[piece.dataset.color][newType];
     }
 
     function logMove(
