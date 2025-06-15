@@ -1,5 +1,5 @@
 import { calculateValidMoves, setEnPassantInfo, getEnPassantInfo } from './movement.js';
-import createEngine from './engine/stockfish-17-lite-single.js';
+import createEngine from './engine/createEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let selectedPiece = null;
