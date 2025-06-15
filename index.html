@@ -2,20 +2,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Chess</title>
+    <title>Chessies</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Simple Chess</h1>
+    <h1>Chessies</h1>
     <div class="game-container">
         <div class="board-container">
             <div class="turn-indicator" id="turnIndicator">White's Turn</div>
+            <div class="mode-indicator" id="modeIndicator">Two Player Game</div>
             <div class="chess-board" id="chessBoard"></div>
         </div>
 
         <div class="control-panel">
-            <h2>Control Panel</h2>
-            <button id="newGameBtn">New Game</button>
+            <button id="newGameBtn">New Two Player Game</button>
             <div class="ai-controls">
                 <label for="aiLevel">Stockfish Level:</label>
                 <select id="aiLevel">
@@ -46,13 +46,15 @@
     </div>
 
     <div class="info-panel">
-        <h2>Game Log</h2>
+        <h2>Move History</h2>
         <div class="game-log" id="gameLog">
             <p>Game started. White to move.</p>
         </div>
 
+
         <h2>How to Play</h2>
         <p>Click a piece to select it and click a highlighted square to move or simply drag a piece to its destination.</p>
+
     </div>
 
     <div class="modal" id="promotionModal" style="display:none;">

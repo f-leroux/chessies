@@ -27,6 +27,11 @@ h1 {
     align-items: center;
 }
 
+.mode-indicator {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
 .chess-board {
     display: grid;
     grid-template-columns: repeat(8, 50px);

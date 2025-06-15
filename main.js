@@ -14,12 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const board = document.getElementById('chessBoard');
     const gameLog = document.getElementById('gameLog');
     const turnIndicator = document.getElementById('turnIndicator');
+    const modeIndicator = document.getElementById('modeIndicator');
     const newGameBtn = document.getElementById('newGameBtn');
     const playAIBtn = document.getElementById('playAIBtn');
     const aiLevelSelect = document.getElementById('aiLevel');
     const promotionModal = document.getElementById('promotionModal');
     const promotionButtons = promotionModal.querySelectorAll('button');
     let promotionResolver = null;
+    modeIndicator.textContent = 'Two Player Game';
 
     promotionButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -666,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
             engine.terminate();
             engine = null;
         }
+        modeIndicator.textContent = 'Two Player Game';
         initializeBoard();
         gameLog.innerHTML = '<p>Game started. White to move.</p>';
         updatePgnLog();
@@ -676,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
         aiLevel = parseInt(aiLevelSelect.value, 10);
         await initEngine();
         initializeBoard();
+        modeIndicator.textContent = 'Vs Stockfish';
         gameLog.innerHTML = '<p>Game started vs Stockfish. White to move.</p>';
         updatePgnLog();
     });
