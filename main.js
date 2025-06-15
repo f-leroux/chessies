@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cell) return;
 
         const piece = document.createElement('img');
-        piece.className = `piece ${color}`;
+        piece.classList.add('piece');
         piece.dataset.type = type;
         piece.dataset.color = color;
         piece.src = pieceImages[color][type];
