@@ -95,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.dataset.row = row;
                 cell.dataset.col = col;
                 cell.addEventListener('click', handleCellClick);
+                cell.addEventListener('dragover', handleDragOver);
+                cell.addEventListener('drop', handleDrop);
                 board.appendChild(cell);
             }
         }
@@ -128,6 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
         piece.dataset.moved = 'false';
         piece.src = pieceImages[color][type];
         piece.alt = `${color} ${type}`;
+        piece.draggable = true;
+        piece.addEventListener('dragstart', handleDragStart);
+        piece.addEventListener('dragend', handleDragEnd);
 
         cell.appendChild(piece);
     }
@@ -308,6 +313,41 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.selected').forEach(cell => {
             cell.classList.remove('selected');
         });
+    }
+
+    function handleDragStart(event) {
+        const piece = event.target;
+        if (piece.dataset.color !== currentTurn) {
+            event.preventDefault();
+            return;
+        }
+        clearSelection();
+        selectPiece(piece);
+    }
+
+    function handleDragEnd() {
+        clearSelection();
+    }
+
+    function handleDragOver(event) {
+        if (selectedPiece) {
+            event.preventDefault();
+        }
+    }
+
+    async function handleDrop(event) {
+        event.preventDefault();
+        if (!selectedPiece) return;
+        const cell = event.currentTarget;
+        const isValidMove = validMoves.some(
+            move =>
+                move.row === parseInt(cell.dataset.row) &&
+                move.col === parseInt(cell.dataset.col)
+        );
+        if (isValidMove) {
+            await movePiece(selectedPiece, cell);
+        }
+        clearSelection();
     }
 
     async function movePiece(piece, targetCell, promotionOverride = null) {
