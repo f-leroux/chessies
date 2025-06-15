@@ -1,5 +1,5 @@
 import { calculateValidMoves, setEnPassantInfo, getEnPassantInfo } from './movement.js';
-import createEngine from './engine/stockfish-17-lite-single.js';
+import createEngine from './engine/createEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let selectedPiece = null;
@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateFEN() {
         const rows = [];
-        for (let r = 7; r >= 0; r--) {
+        for (let r = 0; r < 8; r++) {
             let empty = 0;
             let rowStr = '';
             for (let c = 0; c < 8; c++) {
