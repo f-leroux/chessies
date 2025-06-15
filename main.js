@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         piece.classList.add('piece');
         piece.dataset.type = type;
         piece.dataset.color = color;
+        piece.dataset.moved = 'false';
         piece.src = pieceImages[color][type];
         piece.alt = `${color} ${type}`;
 
@@ -144,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const opponentPieces = document.querySelectorAll(`.piece[data-color="${opponentColor}"]`);
 
         for (const opPiece of opponentPieces) {
-            const moves = calculateValidMoves(opPiece, getCellAt);
+            const moves = calculateValidMoves(opPiece, getCellAt, true);
             if (moves.some(m => m.row === kingRow && m.col === kingCol)) {
                 return true;
             }
@@ -155,6 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function simulateMove(piece, targetCell) {
         const sourceCell = piece.parentElement;
         const capturedPiece = targetCell.querySelector('.piece');
+        let castlingRook = null;
+        let castlingTarget = null;
+        let rookMovedBefore = null;
+        const movedBefore = piece.dataset.moved;
         const enPassant = getEnPassantInfo();
 
         let enPassantCaptured = null;
@@ -182,7 +187,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (capturedPiece) targetCell.removeChild(capturedPiece);
+
+        const sourceRowSim = parseInt(sourceCell.dataset.row);
+        const sourceColSim = parseInt(sourceCell.dataset.col);
+        const targetRowSim = parseInt(targetCell.dataset.row);
+        const targetColSim = parseInt(targetCell.dataset.col);
+
+        const isCastling =
+            piece.dataset.type === 'king' &&
+            Math.abs(targetColSim - sourceColSim) === 2;
+        if (isCastling) {
+            if (targetColSim === 6) {
+                castlingRook = getCellAt(sourceRowSim, 7).querySelector('.piece');
+                castlingTarget = getCellAt(sourceRowSim, 5);
+            } else if (targetColSim === 2) {
+                castlingRook = getCellAt(sourceRowSim, 0).querySelector('.piece');
+                castlingTarget = getCellAt(sourceRowSim, 3);
+            }
+            if (castlingRook && castlingTarget) {
+                rookMovedBefore = castlingRook.dataset.moved;
+                castlingTarget.appendChild(castlingRook);
+                castlingRook.dataset.moved = 'true';
+            }
+        }
+
         targetCell.appendChild(piece);
+        piece.dataset.moved = 'true';
 
         return () => {
             sourceCell.appendChild(piece);
@@ -194,6 +224,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
                 if (captureCell) captureCell.appendChild(enPassantCaptured);
             }
+            if (castlingRook && castlingTarget) {
+                const rookSource = targetColSim === 6 ? getCellAt(sourceRowSim, 7) : getCellAt(sourceRowSim, 0);
+                rookSource.appendChild(castlingRook);
+                castlingRook.dataset.moved = rookMovedBefore;
+            }
+            piece.dataset.moved = movedBefore;
         };
     }
 
@@ -285,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         let capturedPiece = targetCell.querySelector('.piece');
+        let castlingRook = null;
         const enPassant = getEnPassantInfo();
         const isEnPassant =
             piece.dataset.type === 'pawn' &&
@@ -304,8 +341,27 @@ document.addEventListener('DOMContentLoaded', () => {
             handleCapture(piece, capturedPiece);
         }
 
-        targetCell.appendChild(piece);
+        const isCastling =
+            piece.dataset.type === 'king' &&
+            Math.abs(targetCol - sourceCol) === 2;
+        if (isCastling) {
+            if (targetCol === 6) {
+                castlingRook = getCellAt(sourceRow, 7).querySelector('.piece');
+                if (castlingRook) {
+                    getCellAt(sourceRow, 5).appendChild(castlingRook);
+                    castlingRook.dataset.moved = 'true';
+                }
+            } else if (targetCol === 2) {
+                castlingRook = getCellAt(sourceRow, 0).querySelector('.piece');
+                if (castlingRook) {
+                    getCellAt(sourceRow, 3).appendChild(castlingRook);
+                    castlingRook.dataset.moved = 'true';
+                }
+            }
+        }
 
+        targetCell.appendChild(piece);
+        piece.dataset.moved = 'true';
         let promotionPiece = null;
         if (
             originalType === 'pawn' &&
@@ -389,8 +445,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }[pieceType] || '';
 
         let notation = '';
-        if (pieceType === 'pawn') {
-            notation = capturedPiece ? `${fromSquare[0]}x${toSquare}` : toSquare;
+        if (
+            pieceType === 'king' &&
+            Math.abs(toCol - fromCol) === 2
+        ) {
+            notation = toCol === 6 ? 'O-O' : 'O-O-O';
+        } else if (pieceType === 'pawn') {
+            notation = capturedPiece
+                ? `${fromSquare[0]}x${toSquare}`
+                : toSquare;
         } else {
             notation = pieceNotation + (capturedPiece ? 'x' : '') + toSquare;
         }
@@ -474,7 +537,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const placement = rows.join('/');
         const turn = currentTurn === 'white' ? 'w' : 'b';
-        const castling = '-';
+        const castlingRights = [];
+        const wKing = document.querySelector('.piece[data-type="king"][data-color="white"]');
+        if (wKing && wKing.dataset.moved !== 'true') {
+            const wRookH = getCellAt(7, 7).querySelector('.piece');
+            const wRookA = getCellAt(7, 0).querySelector('.piece');
+            if (
+                wRookH &&
+                wRookH.dataset.type === 'rook' &&
+                wRookH.dataset.color === 'white' &&
+                wRookH.dataset.moved !== 'true'
+            ) {
+                castlingRights.push('K');
+            }
+            if (
+                wRookA &&
+                wRookA.dataset.type === 'rook' &&
+                wRookA.dataset.color === 'white' &&
+                wRookA.dataset.moved !== 'true'
+            ) {
+                castlingRights.push('Q');
+            }
+        }
+
+        const bKing = document.querySelector('.piece[data-type="king"][data-color="black"]');
+        if (bKing && bKing.dataset.moved !== 'true') {
+            const bRookH = getCellAt(0, 7).querySelector('.piece');
+            const bRookA = getCellAt(0, 0).querySelector('.piece');
+            if (
+                bRookH &&
+                bRookH.dataset.type === 'rook' &&
+                bRookH.dataset.color === 'black' &&
+                bRookH.dataset.moved !== 'true'
+            ) {
+                castlingRights.push('k');
+            }
+            if (
+                bRookA &&
+                bRookA.dataset.type === 'rook' &&
+                bRookA.dataset.color === 'black' &&
+                bRookA.dataset.moved !== 'true'
+            ) {
+                castlingRights.push('q');
+            }
+        }
+
+        const castling = castlingRights.length ? castlingRights.join('') : '-';
         const epInfo = getEnPassantInfo();
         const enPassant = epInfo
             ? String.fromCharCode(97 + parseInt(epInfo.col)) + (8 - parseInt(epInfo.captureRow))

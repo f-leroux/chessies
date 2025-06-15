@@ -8,7 +8,7 @@ export function getEnPassantInfo() {
     return enPassantInfo;
 }
 
-export function calculateValidMoves(piece, getCellAt) {
+export function calculateValidMoves(piece, getCellAt, forAttack = false) {
     const type = piece.dataset.type;
     const color = piece.dataset.color;
     const cell = piece.parentElement;
@@ -25,10 +25,10 @@ export function calculateValidMoves(piece, getCellAt) {
     };
 
     const fn = calculators[type];
-    return fn ? fn(row, col, color, getCellAt) : [];
+    return fn ? fn(row, col, color, getCellAt, forAttack, piece) : [];
 }
 
-function calculatePawnMoves(row, col, color, getCellAt) {
+function calculatePawnMoves(row, col, color, getCellAt, forAttack) {
     const moves = [];
     const direction = color === 'white' ? -1 : 1;
     const startRow = color === 'white' ? 6 : 1;
@@ -159,7 +159,7 @@ function calculateQueenMoves(row, col, color, getCellAt) {
     ];
 }
 
-function calculateKingMoves(row, col, color, getCellAt) {
+function calculateKingMoves(row, col, color, getCellAt, forAttack, piece) {
     const moves = [];
     const directions = [
         { row: -1, col: -1 }, { row: -1, col: 0 }, { row: -1, col: 1 },
@@ -177,5 +177,68 @@ function calculateKingMoves(row, col, color, getCellAt) {
             moves.push({ row: newRow, col: newCol });
         }
     });
+
+    if (!forAttack && piece && piece.dataset.moved !== 'true') {
+        const backRow = color === 'white' ? 7 : 0;
+        if (row === backRow && col === 4) {
+            // Kingside
+            const rookKingside = getCellAt(backRow, 7).querySelector('.piece');
+            if (
+                rookKingside &&
+                rookKingside.dataset.type === 'rook' &&
+                rookKingside.dataset.color === color &&
+                rookKingside.dataset.moved !== 'true'
+            ) {
+                const empty1 = !getCellAt(backRow, 5).querySelector('.piece');
+                const empty2 = !getCellAt(backRow, 6).querySelector('.piece');
+                if (
+                    empty1 &&
+                    empty2 &&
+                    !isSquareAttacked(row, col, color, getCellAt) &&
+                    !isSquareAttacked(backRow, 5, color, getCellAt) &&
+                    !isSquareAttacked(backRow, 6, color, getCellAt)
+                ) {
+                    moves.push({ row: backRow, col: 6, castling: 'kingside' });
+                }
+            }
+
+            // Queenside
+            const rookQueenside = getCellAt(backRow, 0).querySelector('.piece');
+            if (
+                rookQueenside &&
+                rookQueenside.dataset.type === 'rook' &&
+                rookQueenside.dataset.color === color &&
+                rookQueenside.dataset.moved !== 'true'
+            ) {
+                const emptyB = !getCellAt(backRow, 3).querySelector('.piece');
+                const emptyC = !getCellAt(backRow, 2).querySelector('.piece');
+                const emptyD = !getCellAt(backRow, 1).querySelector('.piece');
+                if (
+                    emptyB &&
+                    emptyC &&
+                    emptyD &&
+                    !isSquareAttacked(row, col, color, getCellAt) &&
+                    !isSquareAttacked(backRow, 3, color, getCellAt) &&
+                    !isSquareAttacked(backRow, 2, color, getCellAt)
+                ) {
+                    moves.push({ row: backRow, col: 2, castling: 'queenside' });
+                }
+            }
+        }
+    }
+
     return moves;
+}
+
+function isSquareAttacked(row, col, color, getCellAt) {
+    const opponentColor = color === 'white' ? 'black' : 'white';
+    const opponentPieces = document.querySelectorAll(`.piece[data-color="${opponentColor}"]`);
+
+    for (const opPiece of opponentPieces) {
+        const moves = calculateValidMoves(opPiece, getCellAt, true);
+        if (moves.some(m => m.row === row && m.col === col)) {
+            return true;
+        }
+    }
+    return false;
 }
