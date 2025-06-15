@@ -33,16 +33,18 @@ function calculatePawnMoves(row, col, color, getCellAt, forAttack) {
     const direction = color === 'white' ? -1 : 1;
     const startRow = color === 'white' ? 6 : 1;
 
-    const newRow = row + direction;
-    if (newRow >= 0 && newRow <= 7) {
-        const targetCell = getCellAt(newRow, col);
-        if (!targetCell.querySelector('.piece')) {
-            moves.push({ row: newRow, col });
-            if (row === startRow) {
-                const doubleRow = row + direction * 2;
-                const doubleCell = getCellAt(doubleRow, col);
-                if (doubleCell && !doubleCell.querySelector('.piece')) {
-                    moves.push({ row: doubleRow, col });
+    if (!forAttack) {
+        const newRow = row + direction;
+        if (newRow >= 0 && newRow <= 7) {
+            const targetCell = getCellAt(newRow, col);
+            if (!targetCell.querySelector('.piece')) {
+                moves.push({ row: newRow, col });
+                if (row === startRow) {
+                    const doubleRow = row + direction * 2;
+                    const doubleCell = getCellAt(doubleRow, col);
+                    if (doubleCell && !doubleCell.querySelector('.piece')) {
+                        moves.push({ row: doubleRow, col });
+                    }
                 }
             }
         }
@@ -56,11 +58,14 @@ function calculatePawnMoves(row, col, color, getCellAt, forAttack) {
             const targetPiece = targetCell.querySelector('.piece');
             if (targetPiece && targetPiece.dataset.color !== color) {
                 moves.push({ row: captureRow, col: captureCol });
+            } else if (forAttack) {
+                // consider attack squares even if empty when checking threats
+                moves.push({ row: captureRow, col: captureCol });
             }
         }
     });
 
-    if (enPassantInfo && enPassantInfo.color !== color) {
+    if (!forAttack && enPassantInfo && enPassantInfo.color !== color) {
         if (enPassantInfo.row === row && Math.abs(enPassantInfo.col - col) === 1) {
             const targetRow = enPassantInfo.captureRow;
             const targetCol = enPassantInfo.col;
