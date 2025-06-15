@@ -6,11 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentTurn = 'white';
     let moveCount = 0;
     let pgnMoves = [];
+    let aiEnabled = false;
+    let aiLevel = 5;
+    let engine = null;
 
     const board = document.getElementById('chessBoard');
     const gameLog = document.getElementById('gameLog');
     const turnIndicator = document.getElementById('turnIndicator');
     const newGameBtn = document.getElementById('newGameBtn');
+    const playAIBtn = document.getElementById('playAIBtn');
+    const aiLevelSelect = document.getElementById('aiLevel');
     const promotionModal = document.getElementById('promotionModal');
     const promotionButtons = promotionModal.querySelectorAll('button');
     let promotionResolver = null;
@@ -50,6 +55,33 @@ document.addEventListener('DOMContentLoaded', () => {
             king: 'sprites/b_king.svg'
         }
     };
+
+    async function initEngine() {
+        const response = await fetch(
+            'https://cdn.jsdelivr.net/npm/stockfish@16/stockfish.js'
+        );
+        const source = await response.text();
+        engine = new Worker(
+            URL.createObjectURL(new Blob([source], { type: 'application/javascript' }))
+        );
+        engine.postMessage('uci');
+        engine.postMessage('setoption name Skill Level value ' + aiLevel);
+    }
+
+    function getBestMove(fen) {
+        return new Promise(resolve => {
+            const handler = e => {
+                const text = typeof e.data === 'string' ? e.data : '';
+                if (text.startsWith('bestmove')) {
+                    engine.removeEventListener('message', handler);
+                    resolve(text.split(' ')[1]);
+                }
+            };
+            engine.addEventListener('message', handler);
+            engine.postMessage('position fen ' + fen);
+            engine.postMessage('go movetime 1000');
+        });
+    }
 
     function initializeBoard() {
         board.innerHTML = '';
@@ -247,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function movePiece(piece, targetCell) {
+    async function movePiece(piece, targetCell, promotionOverride = null) {
         const sourceCell = piece.parentElement;
         const sourceRow = parseInt(sourceCell.dataset.row);
         const sourceCol = parseInt(sourceCell.dataset.col);
@@ -284,7 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
             originalType === 'pawn' &&
             (targetRow === 0 || targetRow === 7)
         ) {
-            promotionPiece = await choosePromotionPiece();
+            if (promotionOverride) {
+                promotionPiece = promotionOverride;
+            } else {
+                promotionPiece = await choosePromotionPiece();
+            }
             promotePawn(piece, promotionPiece);
         }
 
@@ -321,6 +357,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sourceCell.classList.remove('selected');
         clearSelection();
+
+        await maybeAIMove();
     }
 
     function handleCapture(attackingPiece, capturedPiece) {
@@ -414,6 +452,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function generateFEN() {
+        const rows = [];
+        for (let r = 7; r >= 0; r--) {
+            let empty = 0;
+            let rowStr = '';
+            for (let c = 0; c < 8; c++) {
+                const cell = getCellAt(r, c);
+                const piece = cell.querySelector('.piece');
+                if (piece) {
+                    if (empty > 0) {
+                        rowStr += empty;
+                        empty = 0;
+                    }
+                    const map = { pawn: 'p', rook: 'r', knight: 'n', bishop: 'b', queen: 'q', king: 'k' };
+                    let ch = map[piece.dataset.type] || 'p';
+                    if (piece.dataset.color === 'white') ch = ch.toUpperCase();
+                    rowStr += ch;
+                } else {
+                    empty++;
+                }
+            }
+            if (empty > 0) rowStr += empty;
+            rows.push(rowStr);
+        }
+
+        const placement = rows.join('/');
+        const turn = currentTurn === 'white' ? 'w' : 'b';
+        const castling = '-';
+        const epInfo = getEnPassantInfo();
+        const enPassant = epInfo
+            ? String.fromCharCode(97 + parseInt(epInfo.col)) + (8 - parseInt(epInfo.captureRow))
+            : '-';
+        const halfmove = 0;
+        const fullmove = Math.floor(moveCount / 2) + 1;
+        return `${placement} ${turn} ${castling} ${enPassant} ${halfmove} ${fullmove}`;
+    }
+
+    async function maybeAIMove() {
+        if (!aiEnabled || currentTurn !== 'black') return;
+        const fen = generateFEN();
+        const best = await getBestMove(fen);
+        if (!best) return;
+        const fromCol = best.charCodeAt(0) - 97;
+        const fromRow = 8 - parseInt(best[1]);
+        const toCol = best.charCodeAt(2) - 97;
+        const toRow = 8 - parseInt(best[3]);
+        const promoMap = { q: 'queen', r: 'rook', b: 'bishop', n: 'knight' };
+        const promo = best.length > 4 ? promoMap[best[4]] : null;
+        const source = getCellAt(fromRow, fromCol);
+        const piece = source.querySelector('.piece');
+        const target = getCellAt(toRow, toCol);
+        if (piece && target) {
+            await movePiece(piece, target, promo);
+        }
+    }
+
     function endGame(winner) {
         document.querySelectorAll('.cell').forEach(cell => {
             cell.removeEventListener('click', handleCellClick);
@@ -424,8 +518,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     newGameBtn.addEventListener('click', function() {
+        aiEnabled = false;
+        if (engine) {
+            engine.terminate();
+            engine = null;
+        }
         initializeBoard();
         gameLog.innerHTML = '<p>Game started. White to move.</p>';
+        updatePgnLog();
+    });
+
+    playAIBtn.addEventListener('click', async function() {
+        aiEnabled = true;
+        aiLevel = parseInt(aiLevelSelect.value, 10);
+        await initEngine();
+        initializeBoard();
+        gameLog.innerHTML = '<p>Game started vs Stockfish. White to move.</p>';
         updatePgnLog();
     });
 
