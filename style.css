@@ -83,6 +83,15 @@ h1 {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+.ai-controls {
+    margin-top: 10px;
+}
+
+.ai-controls select {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
 .info-panel {
     width: 100%;
     max-width: 600px;
