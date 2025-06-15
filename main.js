@@ -1,4 +1,5 @@
 import { calculateValidMoves, setEnPassantInfo, getEnPassantInfo } from './movement.js';
+import createEngine from './engine/stockfish-17-lite-single.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     let selectedPiece = null;
@@ -57,13 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function initEngine() {
-        const response = await fetch(
-            'https://cdn.jsdelivr.net/npm/stockfish@16/stockfish.js'
-        );
-        const source = await response.text();
-        engine = new Worker(
-            URL.createObjectURL(new Blob([source], { type: 'application/javascript' }))
-        );
+        engine = createEngine();
         engine.postMessage('uci');
         engine.postMessage('setoption name Skill Level value ' + aiLevel);
     }
